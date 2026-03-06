@@ -31,7 +31,13 @@ export default function SignUp() {
       navigate('/');
     } catch (err: any) {
       console.error('Sign up error:', err);
-      setError(err.message || 'Failed to create an account.');
+      if (err.code === 'auth/email-already-in-use' || err.message?.includes('auth/email-already-in-use')) {
+        setError('An account with this email already exists. Please sign in instead.');
+      } else if (err.code === 'auth/weak-password' || err.message?.includes('auth/weak-password')) {
+        setError('Password should be at least 6 characters.');
+      } else {
+        setError(err.message || 'Failed to create an account.');
+      }
     } finally {
       setLoading(false);
     }

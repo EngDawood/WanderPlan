@@ -14,6 +14,7 @@ export default function SavedItineraryDetail() {
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [editingNotesId, setEditingNotesId] = useState<string | null>(null);
   const [notesText, setNotesText] = useState('');
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchItinerary = async () => {
@@ -34,6 +35,7 @@ export default function SavedItineraryDetail() {
   }, [id]);
 
   const saveNotes = async (placeId: string, dbId: string) => {
+    setSaveError(null);
     try {
       const response = await fetch(`/api/places/${dbId}/notes`, {
         method: 'PUT',
@@ -55,7 +57,7 @@ export default function SavedItineraryDetail() {
       setEditingNotesId(null);
     } catch (err) {
       console.error(err);
-      alert('Failed to save notes. Please try again.');
+      setSaveError('Failed to save notes. Please try again.');
     }
   };
 
@@ -308,6 +310,11 @@ export default function SavedItineraryDetail() {
                       <div className="mt-4 pt-4 border-t border-gray-100">
                         {editingNotesId === place.place_id ? (
                           <div className="flex flex-col space-y-2">
+                            {saveError && (
+                              <div className="p-2 bg-red-50 text-red-600 text-xs rounded-lg">
+                                {saveError}
+                              </div>
+                            )}
                             <textarea
                               value={notesText}
                               onChange={(e) => setNotesText(e.target.value)}

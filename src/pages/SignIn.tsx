@@ -29,8 +29,15 @@ export default function SignIn() {
       navigate('/');
     } catch (err: any) {
       console.error('Sign in error:', err);
-      if (err.code === 'auth/invalid-credential') {
+      if (
+        err.code === 'auth/invalid-credential' || 
+        err.message?.includes('auth/invalid-credential') ||
+        err.code === 'auth/user-not-found' ||
+        err.code === 'auth/wrong-password'
+      ) {
         setError('Invalid email or password. Please try again.');
+      } else if (err.code === 'auth/too-many-requests' || err.message?.includes('auth/too-many-requests')) {
+        setError('Too many failed login attempts. Please try again later.');
       } else {
         setError(err.message || 'Failed to sign in. Please check your credentials.');
       }
@@ -92,7 +99,11 @@ export default function SignIn() {
             />
           </div>
           <div className="flex justify-end mt-2">
-            <button type="button" className="text-sm font-medium text-indigo-600 hover:text-indigo-500">
+            <button 
+              type="button" 
+              onClick={() => navigate('/forgot-password')}
+              className="text-sm font-medium text-indigo-600 hover:text-indigo-500"
+            >
               Forgot password?
             </button>
           </div>

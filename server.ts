@@ -1,12 +1,9 @@
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import { db } from "./server/db";
-import { GoogleGenAI, Type } from "@google/genai";
 import dotenv from "dotenv";
 
 dotenv.config();
-
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 async function startServer() {
   const app = express();
@@ -40,7 +37,7 @@ async function startServer() {
         return res.status(404).json({ error: "Itinerary not found" });
       }
       
-      const places = db.prepare("SELECT * FROM places WHERE itinerary_id = ? ORDER BY section, order_index").all();
+      const places = db.prepare("SELECT * FROM places WHERE itinerary_id = ? ORDER BY section, order_index").all(id);
       
       res.json({ ...(itinerary as any), places });
     } catch (error) {
@@ -55,8 +52,8 @@ async function startServer() {
       const { name, city, date, places } = req.body;
       
       const insertItinerary = db.prepare("INSERT INTO itineraries (name, city, date) VALUES (?, ?, ?)");
-      const result = insertItinerary.run(name, city, date || null);
-      const itineraryId = result.lastInsertRowid;
+      const result = insertItinerary.run(name, city ?? 'Unknown City', date || null);
+      const itineraryId = Number(result.lastInsertRowid);
       
       const insertPlace = db.prepare(
         "INSERT INTO places (itinerary_id, name, address, rating, price_level, photo_url, category, section, order_index, time_estimate, lat, lng, place_id, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
@@ -66,19 +63,19 @@ async function startServer() {
         for (const place of places) {
           insertPlace.run(
             itineraryId,
-            place.name,
-            place.address,
-            place.rating || null,
-            place.price_level || null,
-            place.photo_url || null,
-            place.category || null,
-            place.section,
-            place.order_index,
-            place.time_estimate || null,
-            place.lat,
-            place.lng,
-            place.place_id,
-            place.notes || null
+            place.name ?? 'Unknown Place',
+            place.address ?? null,
+            place.rating ?? null,
+            place.price_level ?? null,
+            place.photo_url ?? null,
+            place.category ?? null,
+            place.section ?? 'Morning',
+            place.order_index ?? 0,
+            place.time_estimate ?? null,
+            place.lat ?? null,
+            place.lng ?? null,
+            place.place_id ?? null,
+            place.notes ?? null
           );
         }
       });
@@ -88,7 +85,7 @@ async function startServer() {
       res.status(201).json({ id: itineraryId, name, city, date });
     } catch (error) {
       console.error("Error creating itinerary:", error);
-      res.status(500).json({ error: "Failed to create itinerary" });
+      res.status(500).json({ error: "Failed to create itinerary", details: error instanceof Error ? error.message : String(error) });
     }
   });
 
@@ -114,61 +111,6 @@ async function startServer() {
     } catch (error) {
       console.error("Error updating notes:", error);
       res.status(500).json({ error: "Failed to update notes" });
-    }
-  });
-
-  // Generate itinerary using Gemini
-  app.post("/api/generate-itinerary", async (req, res) => {
-    try {
-      const { city, categories, places } = req.body;
-      
-      const prompt = `
-        Create a daily itinerary for ${city} using the following places selected by the user:
-        ${JSON.stringify(places, null, 2)}
-        
-        Organize these places into three sections: "Morning", "Afternoon", and "Evening".
-        Provide a logical order and a time estimate for each place (e.g., "09:00 AM - 11:00 AM").
-        Make sure to include all the provided places.
-      `;
-
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: prompt,
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                place_id: { type: Type.STRING, description: "The place_id from the input list" },
-                section: { type: Type.STRING, description: "Must be 'Morning', 'Afternoon', or 'Evening'" },
-                order_index: { type: Type.INTEGER, description: "The order index within the section (0, 1, 2...)" },
-                time_estimate: { type: Type.STRING, description: "Estimated time, e.g., '09:00 AM - 11:00 AM'" }
-              },
-              required: ["place_id", "section", "order_index", "time_estimate"]
-            }
-          }
-        }
-      });
-
-      const generatedPlan = JSON.parse(response.text || "[]");
-      
-      // Merge the generated plan with the original place data
-      const organizedPlaces = generatedPlan.map((planItem: any) => {
-        const placeDetails = places.find((p: any) => p.place_id === planItem.place_id);
-        return {
-          ...placeDetails,
-          section: planItem.section,
-          order_index: planItem.order_index,
-          time_estimate: planItem.time_estimate
-        };
-      });
-
-      res.json(organizedPlaces);
-    } catch (error) {
-      console.error("Error generating itinerary:", error);
-      res.status(500).json({ error: "Failed to generate itinerary" });
     }
   });
 

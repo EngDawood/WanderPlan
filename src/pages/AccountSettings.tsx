@@ -45,7 +45,10 @@ export default function AccountSettings() {
         <section>
           <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">{t('settings.security_prefs')}</h2>
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden divide-y divide-gray-100">
-            <button className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors text-left">
+            <button 
+              onClick={() => navigate('/settings/change-password')}
+              className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors text-left"
+            >
               <div className="flex items-center">
                 <Lock size={20} className={`text-gray-400 ${language === 'ar' ? 'ml-3' : 'mr-3'}`} />
                 <span className="text-gray-900 font-medium">{t('settings.change_password')}</span>

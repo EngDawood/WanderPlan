@@ -26,23 +26,53 @@ export default function GeneratedItinerary() {
 
     const generatePlan = async () => {
       try {
-        const response = await fetch('/api/generate-itinerary', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            city: state.city,
-            categories: state.categories,
-            places: state.selectedPlaces,
-          }),
+        const places = [...state.selectedPlaces];
+        const totalPlaces = places.length;
+        
+        const morningCount = Math.ceil(totalPlaces / 3);
+        const afternoonCount = Math.ceil((totalPlaces - morningCount) / 2);
+        
+        const formatTime = (hour: number) => {
+          const period = hour >= 12 && hour < 24 ? 'PM' : 'AM';
+          let displayHour = hour % 12;
+          if (displayHour === 0) displayHour = 12;
+          return `${displayHour}:00 ${period}`;
+        };
+        
+        const generated = places.map((place, index) => {
+          let section = 'Evening';
+          let order_index = 0;
+          let startHour = 9;
+          
+          if (index < morningCount) {
+            section = 'Morning';
+            order_index = index;
+            startHour = 9 + (index * 2);
+          } else if (index < morningCount + afternoonCount) {
+            section = 'Afternoon';
+            order_index = index - morningCount;
+            startHour = 13 + (order_index * 2);
+          } else {
+            section = 'Evening';
+            order_index = index - (morningCount + afternoonCount);
+            startHour = 18 + (order_index * 2);
+          }
+          
+          return {
+            ...place,
+            section,
+            order_index,
+            time_estimate: `${formatTime(startHour)} - ${formatTime(startHour + 2)}`
+          };
         });
-
-        if (!response.ok) throw new Error('Failed to generate itinerary');
-
-        const data = await response.json();
-        setGeneratedItinerary(data);
-      } catch (err) {
+        
+        // Simulate a slight delay for UX
+        await new Promise(resolve => setTimeout(resolve, 800));
+        
+        setGeneratedItinerary(generated);
+      } catch (err: any) {
         console.error(err);
-        setError('Could not generate your itinerary. Please try again.');
+        setError(`Could not generate your itinerary. Please try again.`);
       } finally {
         setLoading(false);
       }
@@ -51,30 +81,44 @@ export default function GeneratedItinerary() {
     generatePlan();
   }, [state.selectedPlaces, state.city, state.categories, state.generatedItinerary, navigate, setGeneratedItinerary]);
 
-  const handleSave = async () => {
-    const name = prompt('Name your trip:', `Trip to ${state.city.split(',')[0]}`);
-    if (!name) return;
+  const [showNameModal, setShowNameModal] = useState(false);
+  const [tripName, setTripName] = useState(`Trip to ${state.city.split(',')[0]}`);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
+  const handleSaveClick = () => {
+    setSaveError(null);
+    setShowNameModal(true);
+  };
+
+  const handleConfirmSave = async () => {
+    if (!tripName.trim()) return;
+    
+    setSaveError(null);
     setSaving(true);
     try {
       const response = await fetch('/api/itineraries', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name,
+          name: tripName,
           city: state.city,
           date,
           places: state.generatedItinerary,
         }),
       });
 
-      if (!response.ok) throw new Error('Failed to save itinerary');
+      if (!response.ok) {
+        const errData = await response.json().catch(() => null);
+        console.error("Server error:", errData);
+        throw new Error(errData?.details || 'Failed to save itinerary');
+      }
       
       const data = await response.json();
+      setShowNameModal(false);
       navigate(`/saved/${data.id}`);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert('Failed to save itinerary.');
+      setSaveError(`Failed to save itinerary: ${err.message}`);
     } finally {
       setSaving(false);
     }
@@ -311,7 +355,7 @@ export default function GeneratedItinerary() {
       {/* Action Bar */}
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-100 max-w-md mx-auto z-20 pb-safe flex space-x-3">
         <button
-          onClick={handleSave}
+          onClick={handleSaveClick}
           disabled={saving}
           className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-semibold flex items-center justify-center hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 disabled:opacity-70"
         >
@@ -323,6 +367,43 @@ export default function GeneratedItinerary() {
           {saving ? 'Saving...' : 'Save Itinerary'}
         </button>
       </div>
+
+      {/* Name Trip Modal */}
+      {showNameModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Name your trip</h3>
+            {saveError && (
+              <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-xl text-sm">
+                {saveError}
+              </div>
+            )}
+            <input
+              type="text"
+              value={tripName}
+              onChange={(e) => setTripName(e.target.value)}
+              className="w-full p-3 border border-gray-300 rounded-xl mb-6 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+              placeholder="e.g. Summer Vacation"
+              autoFocus
+            />
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setShowNameModal(false)}
+                className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmSave}
+                disabled={!tripName.trim()}
+                className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

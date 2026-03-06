@@ -24,6 +24,8 @@ import Favorites from './pages/Favorites';
 import History from './pages/History';
 import SignIn from './pages/SignIn';
 import SignUp from './pages/SignUp';
+import ForgotPassword from './pages/ForgotPassword';
+import ChangePassword from './pages/ChangePassword';
 import { LoadScript } from '@react-google-maps/api';
 
 const libraries: ("places" | "geometry" | "drawing" | "visualization")[] = ['places'];
@@ -55,6 +57,7 @@ export default function App() {
               <Routes>
                 <Route path="/signin" element={<SignIn />} />
                 <Route path="/signup" element={<SignUp />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/" element={<Layout />}>
                   <Route index element={<Home />} />
                   <Route path="search" element={<CitySearch />} />
@@ -67,6 +70,7 @@ export default function App() {
                   <Route path="saved/:id" element={<ProtectedRoute><SavedItineraryDetail /></ProtectedRoute>} />
                   <Route path="profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                   <Route path="settings" element={<ProtectedRoute><AccountSettings /></ProtectedRoute>} />
+                  <Route path="settings/change-password" element={<ProtectedRoute><ChangePassword /></ProtectedRoute>} />
                   <Route path="favorites" element={<ProtectedRoute><Favorites /></ProtectedRoute>} />
                   <Route path="history" element={<ProtectedRoute><History /></ProtectedRoute>} />
                 </Route>
