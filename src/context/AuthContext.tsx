@@ -1,14 +1,12 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-
-interface User {
-  name: string;
-  email: string;
-}
+import { User, onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth';
+import { auth, isFirebaseConfigured } from '../lib/firebase';
 
 interface AuthContextType {
   user: User | null;
-  signIn: (email: string, name?: string) => void;
-  signOut: () => void;
+  loading: boolean;
+  signOut: () => Promise<void>;
+  signInAsGuest: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -18,24 +16,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (e) {}
+    if (!isFirebaseConfigured || !auth) {
+      // If Firebase is not configured, check for a mock guest user
+      const guestUser = localStorage.getItem('guest_user');
+      if (guestUser) {
+        setUser(JSON.parse(guestUser));
+      }
+      setLoading(false);
+      return;
     }
-    setLoading(false);
+
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  const signIn = (email: string, name: string = 'Traveler') => {
-    const newUser = { email, name };
-    setUser(newUser);
-    localStorage.setItem('user', JSON.stringify(newUser));
+  const signOut = async () => {
+    if (!isFirebaseConfigured || !auth) {
+      setUser(null);
+      localStorage.removeItem('guest_user');
+      return;
+    }
+
+    try {
+      await firebaseSignOut(auth);
+    } catch (error) {
+      console.error('Error signing out', error);
+    }
   };
 
-  const signOut = () => {
-    setUser(null);
-    localStorage.removeItem('user');
+  const signInAsGuest = () => {
+    const mockUser = {
+      uid: 'guest-123',
+      email: 'guest@wanderplan.com',
+      displayName: 'Guest Traveler',
+    } as User;
+    setUser(mockUser);
+    localStorage.setItem('guest_user', JSON.stringify(mockUser));
   };
 
   if (loading) {
@@ -43,7 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, loading, signOut, signInAsGuest }}>
       {children}
     </AuthContext.Provider>
   );

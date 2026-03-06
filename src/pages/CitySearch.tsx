@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { MapPin, Search, Clock, TrendingUp } from 'lucide-react';
 import usePlacesAutocomplete, { getGeocode, getLatLng } from 'use-places-autocomplete';
 import { useTrip } from '../context/TripContext';
+import { useLanguage } from '../context/LanguageContext';
 
 const popularDestinations = [
   { name: 'Paris, France', image: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=300&q=80' },
@@ -14,6 +15,7 @@ const popularDestinations = [
 export default function CitySearch() {
   const navigate = useNavigate();
   const { setCity } = useTrip();
+  const { t, language } = useLanguage();
   const inputRef = useRef<HTMLInputElement>(null);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
 
@@ -74,12 +76,12 @@ export default function CitySearch() {
   return (
     <div className="flex flex-col h-full bg-white p-6 overflow-y-auto">
       <div className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-900">Where are you going?</h2>
-        <p className="text-gray-500 mt-2">Search for a city to start planning.</p>
+        <h2 className="text-2xl font-bold text-gray-900">{t('search.title')}</h2>
+        <p className="text-gray-500 mt-2">{t('search.subtitle')}</p>
       </div>
 
       <div className="relative z-20">
-        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+        <div className={`absolute inset-y-0 ${language === 'ar' ? 'right-0 pr-4' : 'left-0 pl-4'} flex items-center pointer-events-none`}>
           <Search size={20} className="text-gray-400" />
         </div>
         <input
@@ -87,8 +89,8 @@ export default function CitySearch() {
           value={value}
           onChange={handleInput}
           disabled={!ready}
-          placeholder="e.g. Paris, Tokyo, New York"
-          className="w-full pl-11 pr-4 py-4 bg-gray-50 border-transparent rounded-2xl text-lg focus:bg-white focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all shadow-sm"
+          placeholder={t('search.placeholder')}
+          className={`w-full ${language === 'ar' ? 'pr-11 pl-4' : 'pl-11 pr-4'} py-4 bg-gray-50 border-transparent rounded-2xl text-lg focus:bg-white focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all shadow-sm`}
         />
       </div>
 
@@ -106,7 +108,7 @@ export default function CitySearch() {
                 onClick={handleSelect(suggestion)}
                 className="px-4 py-4 flex items-center hover:bg-gray-50 cursor-pointer transition-colors"
               >
-                <div className="bg-gray-100 p-2 rounded-full mr-4">
+                <div className={`bg-gray-100 p-2 rounded-full ${language === 'ar' ? 'ml-4' : 'mr-4'}`}>
                   <MapPin size={18} className="text-gray-600" />
                 </div>
                 <div>
@@ -124,8 +126,8 @@ export default function CitySearch() {
           {recentSearches.length > 0 && (
             <section>
               <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center">
-                <Clock size={16} className="mr-2" />
-                Recent Searches
+                <Clock size={16} className={language === 'ar' ? 'ml-2' : 'mr-2'} />
+                {t('search.recent')}
               </h3>
               <div className="flex flex-wrap gap-2">
                 {recentSearches.map((city) => (
@@ -143,8 +145,8 @@ export default function CitySearch() {
 
           <section>
             <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center">
-              <TrendingUp size={16} className="mr-2" />
-              Popular Destinations
+              <TrendingUp size={16} className={language === 'ar' ? 'ml-2' : 'mr-2'} />
+              {t('search.popular')}
             </h3>
             <div className="grid grid-cols-2 gap-4">
               {popularDestinations.map((dest) => (
@@ -159,7 +161,7 @@ export default function CitySearch() {
                     className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-black/10"></div>
-                  <div className="absolute bottom-0 left-0 p-3">
+                  <div className={`absolute bottom-0 ${language === 'ar' ? 'right-0' : 'left-0'} p-3`}>
                     <span className="text-white font-semibold text-sm leading-tight block">
                       {dest.name.split(',')[0]}
                     </span>

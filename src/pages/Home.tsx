@@ -2,10 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Plus, Calendar, ChevronRight } from 'lucide-react';
 import { useTrip } from '../context/TripContext';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function Home() {
   const navigate = useNavigate();
   const { resetTrip } = useTrip();
+  const { t, language } = useLanguage();
   const [recentItineraries, setRecentItineraries] = useState<any[]>([]);
 
   useEffect(() => {
@@ -24,10 +26,10 @@ export default function Home() {
     <div className="flex flex-col h-full bg-white p-6">
       <div className="mt-8 mb-12">
         <h1 className="text-4xl font-bold text-gray-900 tracking-tight">
-          WanderPlan
+          {t('home.title')}
         </h1>
         <p className="text-lg text-gray-500 mt-2">
-          Your personal travel itinerary generator.
+          {t('home.subtitle')}
         </p>
       </div>
 
@@ -36,23 +38,23 @@ export default function Home() {
         className="w-full bg-indigo-600 text-white rounded-2xl py-4 px-6 flex items-center justify-between shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all active:scale-95"
       >
         <div className="flex items-center">
-          <div className="bg-white/20 p-2 rounded-xl mr-4">
+          <div className={`bg-white/20 p-2 rounded-xl ${language === 'ar' ? 'ml-4' : 'mr-4'}`}>
             <Plus size={24} className="text-white" />
           </div>
-          <span className="text-lg font-semibold">Plan a New Trip</span>
+          <span className="text-lg font-semibold">{t('home.plan_new_trip')}</span>
         </div>
-        <ChevronRight size={24} className="text-white/70" />
+        <ChevronRight size={24} className={`text-white/70 ${language === 'ar' ? 'rotate-180' : ''}`} />
       </button>
 
       <div className="mt-12 flex-1">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold text-gray-900">Recent Trips</h2>
+          <h2 className="text-xl font-semibold text-gray-900">{t('home.recent_trips')}</h2>
           {recentItineraries.length > 0 && (
             <button 
               onClick={() => navigate('/saved')}
               className="text-indigo-600 text-sm font-medium hover:underline"
             >
-              See all
+              {t('home.see_all')}
             </button>
           )}
         </div>
@@ -60,8 +62,8 @@ export default function Home() {
         {recentItineraries.length === 0 ? (
           <div className="bg-gray-50 rounded-2xl p-8 text-center border border-gray-100">
             <Calendar size={48} className="mx-auto text-gray-300 mb-4" />
-            <p className="text-gray-500">No saved itineraries yet.</p>
-            <p className="text-sm text-gray-400 mt-1">Plan a trip to see it here.</p>
+            <p className="text-gray-500">{t('home.no_saved')}</p>
+            <p className="text-sm text-gray-400 mt-1">{t('home.plan_to_see')}</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -72,7 +74,7 @@ export default function Home() {
                 className="w-full bg-white border border-gray-100 rounded-2xl p-4 flex items-center justify-between hover:border-indigo-100 hover:shadow-md transition-all text-left"
               >
                 <div className="flex items-center overflow-hidden">
-                  <div className="bg-indigo-50 p-3 rounded-xl mr-4 shrink-0">
+                  <div className={`bg-indigo-50 p-3 rounded-xl shrink-0 ${language === 'ar' ? 'ml-4' : 'mr-4'}`}>
                     <MapPin size={20} className="text-indigo-600" />
                   </div>
                   <div className="truncate">
@@ -80,7 +82,7 @@ export default function Home() {
                     <p className="text-sm text-gray-500 truncate">{itinerary.city}</p>
                   </div>
                 </div>
-                <ChevronRight size={20} className="text-gray-300 shrink-0 ml-2" />
+                <ChevronRight size={20} className={`text-gray-300 shrink-0 ${language === 'ar' ? 'mr-2 rotate-180' : 'ml-2'}`} />
               </button>
             ))}
           </div>

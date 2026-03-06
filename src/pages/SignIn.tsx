@@ -1,24 +1,46 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, ArrowRight, UserCircle } from 'lucide-react';
+import { Mail, Lock, ArrowRight, UserCircle, AlertCircle } from 'lucide-react';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth, isFirebaseConfigured } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
 
 export default function SignIn() {
   const navigate = useNavigate();
-  const { signIn } = useAuth();
+  const { signInAsGuest } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSignIn = (e: React.FormEvent) => {
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email && password) {
-      signIn(email);
+    setError('');
+    
+    if (!isFirebaseConfigured || !auth) {
+      setError('Firebase is not configured. Please add your Firebase API keys to the environment variables, or continue as a guest.');
+      return;
+    }
+
+    setLoading(true);
+    
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
       navigate('/');
+    } catch (err: any) {
+      console.error('Sign in error:', err);
+      if (err.code === 'auth/invalid-credential') {
+        setError('Invalid email or password. Please try again.');
+      } else {
+        setError(err.message || 'Failed to sign in. Please check your credentials.');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleGuestSignIn = () => {
-    signIn('guest@wanderplan.com', 'Guest');
+    signInAsGuest();
     navigate('/');
   };
 
@@ -28,6 +50,13 @@ export default function SignIn() {
         <h1 className="text-3xl font-bold text-gray-900">Welcome back</h1>
         <p className="text-gray-500 mt-2">Sign in to continue planning your trips.</p>
       </div>
+
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl flex items-start">
+          <AlertCircle size={20} className="text-red-500 mt-0.5 mr-3 shrink-0" />
+          <p className="text-sm text-red-700">{error}</p>
+        </div>
+      )}
 
       <form onSubmit={handleSignIn} className="space-y-4 flex-1">
         <div>
@@ -72,10 +101,11 @@ export default function SignIn() {
         <div className="pt-4 space-y-3">
           <button
             type="submit"
-            className="w-full flex items-center justify-center py-4 px-4 border border-transparent rounded-xl shadow-sm text-lg font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            disabled={loading}
+            className="w-full flex items-center justify-center py-4 px-4 border border-transparent rounded-xl shadow-sm text-lg font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-70"
           >
-            Sign In
-            <ArrowRight size={20} className="ml-2" />
+            {loading ? 'Signing in...' : 'Sign In'}
+            {!loading && <ArrowRight size={20} className="ml-2" />}
           </button>
 
           <div className="relative flex items-center py-2">
