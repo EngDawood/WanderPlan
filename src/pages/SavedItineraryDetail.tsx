@@ -121,10 +121,11 @@ export default function SavedItineraryDetail() {
     }
 
     const events: ics.EventAttributes[] = [];
-    const baseDate = new Date(itinerary.date);
-    const year = baseDate.getFullYear();
-    const month = baseDate.getMonth() + 1;
-    const day = baseDate.getDate();
+    // Fix timezone issue by parsing date string directly
+    const [yearStr, monthStr, dayStr] = itinerary.date.split('-');
+    const year = parseInt(yearStr, 10);
+    const month = parseInt(monthStr, 10);
+    const day = parseInt(dayStr, 10);
 
     itinerary.places.forEach((place: any) => {
       // Parse time estimate (e.g., "09:00 AM - 11:00 AM")

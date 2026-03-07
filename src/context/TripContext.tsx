@@ -12,6 +12,9 @@ export type Place = {
   lng: number;
   open_now?: boolean;
   description?: string;
+  opening_hours?: string[];
+  reviews?: { author_name: string; rating: number; text: string; relative_time_description: string }[];
+  user_ratings_total?: number;
 };
 
 export type ItineraryPlace = Place & {

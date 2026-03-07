@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTrip, ItineraryPlace } from '../context/TripContext';
-import { Clock, MapPin, Loader2, Save, Share2, Edit3, Navigation, Calendar, ArrowUp, ArrowDown, MessageSquare } from 'lucide-react';
+import { Clock, MapPin, Loader2, Save, Share2, Edit3, Navigation, Calendar, ArrowUp, ArrowDown, MessageSquare, Download, FileText } from 'lucide-react';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import * as ics from 'ics';
 
 export default function GeneratedItinerary() {
   const navigate = useNavigate();
@@ -12,6 +15,7 @@ export default function GeneratedItinerary() {
   const [date, setDate] = useState<string>('');
   const [editingNotesId, setEditingNotesId] = useState<string | null>(null);
   const [notesText, setNotesText] = useState<string>('');
+  const [showExportMenu, setShowExportMenu] = useState(false);
 
   useEffect(() => {
     if (state.selectedPlaces.length < 3) {
@@ -174,6 +178,125 @@ export default function GeneratedItinerary() {
     setEditingNotesId(null);
   };
 
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    
+    // Title
+    doc.setFontSize(20);
+    doc.text(`Trip to ${state.city.split(',')[0]}`, 14, 22);
+    
+    // Subtitle
+    doc.setFontSize(12);
+    doc.setTextColor(100);
+    const dateStr = date ? ` - ${new Date(date).toLocaleDateString()}` : '';
+    doc.text(`${state.city.split(',')[0]}${dateStr}`, 14, 30);
+    
+    let yPos = 40;
+    
+    const sections = ['Morning', 'Afternoon', 'Evening'] as const;
+    
+    sections.forEach(section => {
+      const sectionPlaces = state.generatedItinerary
+        .filter((p: any) => p.section === section)
+        .sort((a: any, b: any) => a.order_index - b.order_index);
+        
+      if (sectionPlaces.length === 0) return;
+      
+      // Section Header
+      doc.setFontSize(14);
+      doc.setTextColor(0);
+      doc.text(section, 14, yPos);
+      yPos += 10;
+      
+      const tableData = sectionPlaces.map((place: any) => [
+        place.time_estimate,
+        place.name,
+        place.address,
+        place.notes || ''
+      ]);
+      
+      (doc as any).autoTable({
+        startY: yPos,
+        head: [['Time', 'Place', 'Address', 'Notes']],
+        body: tableData,
+        theme: 'striped',
+        headStyles: { fillColor: [79, 70, 229] }, // Indigo-600
+        margin: { top: 10, right: 14, bottom: 10, left: 14 },
+      });
+      
+      yPos = (doc as any).lastAutoTable.finalY + 15;
+    });
+    
+    doc.save(`Trip_to_${state.city.split(',')[0].replace(/\s+/g, '_')}_Itinerary.pdf`);
+    setShowExportMenu(false);
+  };
+
+  const exportToICal = () => {
+    if (!date) {
+      alert('Please select a date for this itinerary to export to calendar.');
+      return;
+    }
+
+    const events: ics.EventAttributes[] = [];
+    // Fix timezone issue by parsing date string directly
+    const [yearStr, monthStr, dayStr] = date.split('-');
+    const year = parseInt(yearStr, 10);
+    const month = parseInt(monthStr, 10);
+    const day = parseInt(dayStr, 10);
+
+    state.generatedItinerary.forEach((place: any) => {
+      // Parse time estimate (e.g., "09:00 AM - 11:00 AM")
+      let startHour = 9;
+      let startMin = 0;
+      let durationHours = 2;
+      
+      try {
+        const timeMatch = place.time_estimate.match(/(\d+):(\d+)\s*(AM|PM)/i);
+        if (timeMatch) {
+          let h = parseInt(timeMatch[1], 10);
+          const m = parseInt(timeMatch[2], 10);
+          const ampm = timeMatch[3].toUpperCase();
+          
+          if (ampm === 'PM' && h < 12) h += 12;
+          if (ampm === 'AM' && h === 12) h = 0;
+          
+          startHour = h;
+          startMin = m;
+        }
+      } catch (e) {
+        console.error("Failed to parse time:", place.time_estimate);
+      }
+
+      events.push({
+        title: place.name,
+        description: `${place.notes ? place.notes + '\n\n' : ''}Address: ${place.address}\nLink: https://www.google.com/maps/search/?api=1&query=${place.lat},${place.lng}&query_place_id=${place.place_id}`,
+        location: place.address,
+        start: [year, month, day, startHour, startMin],
+        duration: { hours: durationHours, minutes: 0 },
+        url: `https://www.google.com/maps/search/?api=1&query=${place.lat},${place.lng}&query_place_id=${place.place_id}`,
+      });
+    });
+
+    ics.createEvents(events, (error, value) => {
+      if (error) {
+        console.error(error);
+        alert('Failed to generate calendar file.');
+        return;
+      }
+      
+      const blob = new Blob([value], { type: 'text/calendar;charset=utf-8' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Trip_to_${state.city.split(',')[0].replace(/\s+/g, '_')}.ics`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
+    
+    setShowExportMenu(false);
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center h-full bg-white p-6 text-center">
@@ -212,9 +335,36 @@ export default function GeneratedItinerary() {
             <h1 className="text-2xl font-bold text-gray-900">Your Itinerary</h1>
             <p className="text-gray-500 mt-1">{state.city.split(',')[0]}</p>
           </div>
-          <button onClick={handleShare} className="p-2 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 transition-colors">
-            <Share2 size={20} />
-          </button>
+          <div className="flex items-center space-x-2 relative">
+            <button 
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              className="p-2 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 transition-colors"
+            >
+              <Download size={20} />
+            </button>
+            <button onClick={handleShare} className="p-2 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 transition-colors">
+              <Share2 size={20} />
+            </button>
+            
+            {showExportMenu && (
+              <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50">
+                <button 
+                  onClick={exportToPDF}
+                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center"
+                >
+                  <FileText size={16} className="mr-2 text-gray-400" />
+                  Export as PDF
+                </button>
+                <button 
+                  onClick={exportToICal}
+                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center"
+                >
+                  <Calendar size={16} className="mr-2 text-gray-400" />
+                  Export to Calendar (iCal)
+                </button>
+              </div>
+            )}
+          </div>
         </div>
         
         <div className="mt-4 flex items-center bg-gray-50 p-3 rounded-xl border border-gray-100">
@@ -229,7 +379,7 @@ export default function GeneratedItinerary() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-8">
+      <div className="flex-1 overflow-y-auto p-4 space-y-8" onClick={() => setShowExportMenu(false)}>
         {sections.map((section) => {
           const sectionPlaces = state.generatedItinerary
             .filter((p) => p.section === section)

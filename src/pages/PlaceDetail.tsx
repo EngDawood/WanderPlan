@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTrip, Place } from '../context/TripContext';
 import { Star, MapPin, Clock, Globe, Phone, Plus, Check, Loader2, Navigation, Heart } from 'lucide-react';
+import { getCache, setCache } from '../utils/cache';
 
 export default function PlaceDetail() {
   const { id } = useParams<{ id: string }>();
@@ -15,20 +16,42 @@ export default function PlaceDetail() {
   useEffect(() => {
     if (!id || !window.google || !mapRef.current) return;
 
-    const service = new window.google.maps.places.PlacesService(mapRef.current);
+    const cacheKey = `place_detail_${id}`;
+    const cachedPlace = getCache(cacheKey);
     
-    service.getDetails(
-      {
-        placeId: id,
-        fields: ['name', 'rating', 'formatted_phone_number', 'geometry', 'formatted_address', 'photo', 'reviews', 'opening_hours', 'website', 'price_level', 'types']
-      },
-      (result, status) => {
-        if (status === window.google.maps.places.PlacesServiceStatus.OK && result) {
-          setPlace(result);
+    if (cachedPlace) {
+      setPlace(cachedPlace);
+      setLoading(false);
+    } else {
+      const service = new window.google.maps.places.PlacesService(mapRef.current);
+      
+      service.getDetails(
+        {
+          placeId: id,
+          fields: ['name', 'rating', 'formatted_phone_number', 'geometry', 'formatted_address', 'photo', 'reviews', 'opening_hours', 'website', 'price_level', 'types']
+        },
+        (result, status) => {
+          if (status === window.google.maps.places.PlacesServiceStatus.OK && result) {
+            const processedPlace = {
+              ...result,
+              photo_url: result.photos?.[0]?.getUrl({ maxWidth: 800 }),
+              lat: result.geometry?.location?.lat?.(),
+              lng: result.geometry?.location?.lng?.(),
+              isOpen: result.opening_hours?.isOpen?.(),
+              weekday_text: result.opening_hours?.weekday_text,
+            };
+            // Remove non-serializable Google Maps objects
+            delete processedPlace.photos;
+            delete processedPlace.geometry;
+            delete processedPlace.opening_hours;
+            
+            setCache(cacheKey, processedPlace, 60 * 24); // Cache for 24 hours
+            setPlace(processedPlace);
+          }
+          setLoading(false);
         }
-        setLoading(false);
-      }
-    );
+      );
+    }
 
     // Check if place is in favorites
     const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
@@ -51,9 +74,9 @@ export default function PlaceDetail() {
         address: place.formatted_address || '',
         rating: place.rating,
         price_level: place.price_level,
-        photo_url: place.photos?.[0]?.getUrl({ maxWidth: 800 }),
-        lat: place.geometry?.location?.lat() || 0,
-        lng: place.geometry?.location?.lng() || 0,
+        photo_url: place.photo_url || '',
+        lat: place.lat || 0,
+        lng: place.lng || 0,
         category: place.types?.[0],
       };
       favorites.push(newFavorite);
@@ -95,16 +118,16 @@ export default function PlaceDetail() {
         address: place.formatted_address || '',
         rating: place.rating,
         price_level: place.price_level,
-        photo_url: place.photos?.[0]?.getUrl({ maxWidth: 800 }),
-        lat: place.geometry?.location?.lat() || 0,
-        lng: place.geometry?.location?.lng() || 0,
+        photo_url: place.photo_url || '',
+        lat: place.lat || 0,
+        lng: place.lng || 0,
         category: place.types?.[0],
       };
       addPlace(newPlace);
     }
   };
 
-  const photoUrl = place.photos?.[0]?.getUrl({ maxWidth: 800 });
+  const photoUrl = place.photo_url;
 
   return (
     <div className="flex flex-col h-full bg-white relative pb-24">
@@ -122,10 +145,16 @@ export default function PlaceDetail() {
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30"></div>
         
         {/* Top Actions */}
-        <div className="absolute top-4 right-4 z-10">
+        <div className="absolute top-4 left-4 right-4 z-10 flex justify-between items-center">
+          <button 
+            onClick={() => navigate(-1)}
+            className="p-2.5 bg-black/30 backdrop-blur-md rounded-full text-white hover:bg-black/50 transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
           <button 
             onClick={toggleFavorite}
-            className="p-2.5 bg-white/20 backdrop-blur-md rounded-full text-white hover:bg-white/30 transition-colors"
+            className="p-2.5 bg-black/30 backdrop-blur-md rounded-full text-white hover:bg-black/50 transition-colors"
           >
             <Heart size={24} className={isFavorite ? "fill-pink-500 text-pink-500" : ""} />
           </button>
@@ -157,15 +186,17 @@ export default function PlaceDetail() {
             <p className="text-gray-700">{place.formatted_address}</p>
           </div>
           
-          {place.opening_hours && (
+          {place.weekday_text && (
             <div className="flex items-start">
               <Clock size={20} className="text-indigo-600 mt-0.5 mr-3 shrink-0" />
               <div>
-                <p className={`font-medium ${place.opening_hours.isOpen() ? 'text-emerald-600' : 'text-red-500'}`}>
-                  {place.opening_hours.isOpen() ? 'Open Now' : 'Closed'}
-                </p>
+                {place.isOpen !== undefined && (
+                  <p className={`font-medium ${place.isOpen ? 'text-emerald-600' : 'text-red-500'}`}>
+                    {place.isOpen ? 'Open Now' : 'Closed'}
+                  </p>
+                )}
                 <p className="text-sm text-gray-500 mt-1">
-                  {place.opening_hours.weekday_text?.[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1]}
+                  {place.weekday_text[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1]}
                 </p>
               </div>
             </div>
@@ -193,7 +224,7 @@ export default function PlaceDetail() {
         {/* Action Buttons */}
         <div className="flex space-x-3 pt-4 border-t border-gray-100">
           <button 
-            onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${place.geometry?.location?.lat()},${place.geometry?.location?.lng()}&query_place_id=${id}`, '_blank')}
+            onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${place.lat},${place.lng}&query_place_id=${id}`, '_blank')}
             className="flex-1 py-3 bg-gray-100 text-gray-800 rounded-xl font-medium flex items-center justify-center hover:bg-gray-200 transition-colors"
           >
             <Navigation size={18} className="mr-2" />
