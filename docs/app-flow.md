@@ -10,10 +10,14 @@ This document outlines the primary user journeys and how users interact with the
    - They type in a destination (e.g., "Tokyo, Japan") or click on one of the suggested popular destinations.
 
 2. **Configuration & Generation**
-   - The user is taken to the **City Search** screen.
-   - They confirm the city and select a date for their trip.
+   - The user is taken to the **City Search** screen where they can search for a specific city.
+   - They confirm the city and are taken to the **Preferences** screen.
+   - They select the types of places they want to visit (e.g., Restaurants, Attractions) and click "Find Places".
+   - They are taken to the **Places List** screen, where they browse nearby places matching their preferences.
+   - They can view places in List, Grid, or Compact modes, and see details like opening hours and reviews.
+   - They select at least 3 places they want to include in their itinerary.
    - They click "Generate Itinerary".
-   - A loading state appears while the frontend sends a request to the Gemini AI API.
+   - A loading state appears while the frontend sends a request to the Gemini AI API, passing the selected places.
 
 3. **Reviewing the Itinerary**
    - The AI returns a structured JSON response, which the frontend parses and displays on the **Generated Itinerary** screen.
@@ -32,6 +36,29 @@ This document outlines the primary user journeys and how users interact with the
    - Satisfied with the plan, the user clicks the floating "Save Trip" button at the bottom of the screen.
    - The frontend sends a `POST` request to the Express backend (`/api/itineraries`), saving the itinerary and all its places (including the custom note) to the SQLite database.
    - A success toast appears, and the user is redirected to the **Saved Trips** screen.
+
+## User Authentication Flow
+
+### 1. Creating an Account
+- A new user opens the application and wants to save their trips.
+- They navigate to the **Profile** tab or click a "Sign In" prompt.
+- They are directed to the **Sign In** screen and click "Create an account".
+- On the **Sign Up** screen, they enter their name, email, and a secure password.
+- Upon successful registration via Firebase, they are automatically logged in and redirected to the Home screen.
+
+### 2. Logging In
+- A returning user opens the application.
+- They navigate to the **Sign In** screen.
+- They enter their email and password.
+- Upon successful authentication, their session is restored, and they can access their saved trips and favorites.
+
+### 3. Password Management
+- **Forgot Password**: If a user forgets their password, they click "Forgot Password?" on the Sign In screen. They enter their email, and Firebase sends a password reset link.
+- **Change Password**: An authenticated user can navigate to the **Change Password** screen (e.g., from their Profile), re-authenticate for security, and set a new password.
+
+### 4. Logging Out
+- An authenticated user can choose to log out from their Profile or settings.
+- Their session is securely terminated, and they are redirected to the Home screen or Sign In screen.
 
 ## Secondary Flows
 
@@ -59,6 +86,11 @@ This document outlines the primary user journeys and how users interact with the
    - The user decides they no longer want to visit a specific place.
    - They click the heart icon on the place's card in the Favorites list.
    - The frontend removes the place from `localStorage` and updates the UI instantly.
+
+### Changing Language
+1. **Toggling Language**
+   - The user clicks the language toggle button (e.g., "AR" or "EN") in the top navigation bar.
+   - The application instantly updates the UI language and text direction (LTR to RTL or vice versa) using the `LanguageContext`.
 
 ### Visualizing the Trip
 1. **Map View**

@@ -29,3 +29,15 @@ Users can mark individual places as "Favorites".
 
 ## 6. Map View
 The application includes a Map View that plots all the places in the current itinerary on a Google Map, allowing users to see the geographical spread of their planned day.
+
+## 7. Multi-Language Support
+The application supports both English and Arabic. Users can toggle the language from the Home screen, and the entire interface (including text direction for Arabic) updates dynamically using a custom `LanguageContext`.
+
+## 8. Interactive Preferences & Place Selection
+Before generating an itinerary, users can select their preferred categories (Restaurants, Cafes, Attractions, etc.) and then browse a list of nearby places matching those categories. They can view these places in List, Grid, or Compact modes, and select at least 3 places to be included in their final AI-generated itinerary.
+
+## 9. User Authentication
+The application integrates Firebase Authentication to manage user accounts. Users can sign up, log in, reset their passwords, and change their passwords securely. The authentication state is managed globally via a custom `AuthContext`.
+
+## 10. Performance Caching
+To optimize performance and reduce unnecessary API calls to Google Maps, the application implements a client-side caching mechanism. Place details are temporarily stored in the browser's `localStorage` with a Time-To-Live (TTL), ensuring fast load times for previously viewed locations and minimizing API costs.

@@ -29,13 +29,13 @@ export default function Preferences() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white p-6">
-      <div className="mb-8">
+    <div className="flex flex-col h-full bg-white overflow-hidden">
+      <div className="px-6 pt-6 mb-6 shrink-0">
         <h2 className="text-2xl font-bold text-gray-900">What do you like?</h2>
         <p className="text-gray-500 mt-2">Select the types of places you want to visit in {state.city.split(',')[0]}.</p>
       </div>
 
-      <div className="flex-1 space-y-3">
+      <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-3">
         {CATEGORIES.map((cat) => {
           const isSelected = selected.includes(cat.id);
           const Icon = cat.icon;
@@ -69,7 +69,7 @@ export default function Preferences() {
         })}
       </div>
 
-      <div className="mt-8 pt-4 border-t border-gray-100">
+      <div className="shrink-0 p-6 border-t border-gray-100 bg-white">
         <button
           onClick={handleContinue}
           disabled={selected.length === 0}

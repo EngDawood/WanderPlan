@@ -10,20 +10,24 @@ The AI Travel Planner is a full-stack application built with modern web technolo
 - **Styling**: Tailwind CSS
 - **Routing**: React Router (`react-router-dom`)
 - **Icons**: Lucide React
-- **State Management**: React Context API (`TripContext`)
+- **State Management**: React Context API (`TripContext`, `LanguageContext`, `AuthContext`)
 - **Maps Integration**: Google Maps JavaScript API (Places Library)
 
-### Backend
+### Backend & Services
 - **Server**: Node.js with Express
 - **Database**: SQLite (via `better-sqlite3`)
 - **AI Integration**: Google GenAI SDK (`@google/genai`)
+- **Authentication**: Firebase Authentication
 
 ## System Architecture
 
 ### 1. The Frontend (Client)
 The frontend is a Single Page Application (SPA) that communicates with both the internal Express backend and external Google APIs.
 - **TripContext**: Manages the global state of the user's current trip generation, selected places, and itinerary data.
+- **LanguageContext**: Manages the application language (English/Arabic) and text direction (LTR/RTL).
+- **AuthContext**: Manages the global authentication state, user sessions, and Firebase Auth methods.
 - **Google Maps JS API**: Used directly on the client to fetch rich place details (photos, reviews, opening hours) based on the `place_id` returned by the AI.
+- **Caching Utility**: A custom `localStorage`-based caching system with TTL is used to store Google Maps place details, reducing API costs and improving load times.
 
 ### 2. The Backend (Server)
 The backend is an Express server running on port 3000. It serves two main purposes:
